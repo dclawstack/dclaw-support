@@ -12,8 +12,9 @@
 3. [Step 1: Prepare Your App Repo (Human — 5 minutes)](#step-1-prepare-your-app-repo-human--5-minutes)
 4. [Step 2: Open 3 Agent Tabs (The Parallel Build)](#step-2-open-3-agent-tabs-the-parallel-build)
 5. [Step 3: Merge & Test (Human — 10 minutes)](#step-3-merge--test-human--10-minutes)
-6. [Troubleshooting Common Errors](#troubleshooting-common-errors)
-7. [Checklist Before Saying "Done"](#checklist-before-saying-done)
+6. [Lessons from Building 3 Apps](#lessons-from-building-3-apps)
+7. [Troubleshooting Common Errors](#troubleshooting-common-errors)
+8. [Checklist Before Saying "Done"](#checklist-before-saying-done)
 
 ---
 
@@ -26,15 +27,7 @@ You are building a web application. It has:
 
 Instead of building these one after another (slow), you build them **at the same time** using 3 separate AI agents in 3 browser tabs.
 
-```
-Tab 1 (Backend) ──────┐
-                      ├──→ All 3 work simultaneously → merged app
-Tab 2 (Frontend) ─────┤
-                      │
-Tab 3 (DevOps) ───────┘
-```
-
-**Why this works:** Each agent only touches different files, so they don't conflict.
+> **Important:** Each agent commits to a **separate branch** (`feat/backend`, `feat/frontend`, `feat/infra`), so they never conflict.
 
 ---
 
@@ -44,7 +37,7 @@ Tab 3 (DevOps) ───────┘
 |------|-----------|-----------------|
 | GitHub org invite | Access to `dclawstack` org | Your manager sends it |
 | Assigned app name | e.g., `dclaw-crm` | Your manager tells you |
-| Reserved ports | Backend + frontend port numbers | See port registry in `dclaw-scaffold/README.md` |
+| Reserved ports | Backend + frontend port numbers | See port registry in `README.md` |
 | `PRODUCT-SPEC.md` | A document describing YOUR app's features | You write this (see template below) |
 | Coding agent access | Claude, Kimi, Cursor, etc. | Your team's tool |
 
@@ -195,23 +188,31 @@ This is where the magic happens. You open **3 separate conversations** with your
 > **Important:** Give each agent the SAME starting info:
 > - The repo path: `~/projects/dclaw-YOURAPP`
 > - The full text of your `PRODUCT-SPEC.md`
-> - The anti-patterns list (copied below)
+> - The anti-patterns list from `AGENTS.md`
 
 ---
 
 ### Tab 1: Backend Architect
 
 **What this agent builds:**
-- Database tables (SQLAlchemy models)
-- Data validation rules (Pydantic schemas)
-- Database query helpers (repositories)
-- API endpoints (FastAPI routers)
-- Tests
-- Database migration file
+1. **Models** → Database table definitions (e.g., `Customer` table with name, email, status columns)
+2. **Schemas** → Validation rules (e.g., "email must be unique", "status must be lead/active/churned")
+3. **Repositories** → Database query helpers (e.g., `get_customer_by_id()`, `list_all_customers()`)
+4. **Routers** → HTTP API endpoints (e.g., `GET /api/v1/customers` returns JSON list)
+5. **Tests** → Automated checks that prove the API works
+6. **Alembic migration** → A file that creates the database tables
 
-**What this agent does NOT build:**
-- HTML, CSS, JavaScript, React components
-- Anything the user sees
+**What you give it:**
+- The repo path
+- Your `PRODUCT-SPEC.md`
+- The anti-patterns list
+
+**What you get back:**
+- A working FastAPI backend
+- All CRUD endpoints testable with `pytest`
+- Database migration ready to run
+
+**Branch:** `feat/backend`
 
 **Copy-paste this prompt into Tab 1:**
 
@@ -233,7 +234,10 @@ Build the COMPLETE backend for this app. Read the PRODUCT-SPEC.md in the repo fo
 7. All routers MUST use Depends(get_db)
 8. Pydantic schemas MUST use ConfigDict(from_attributes=True)
 9. Generate alembic migration after creating models: alembic revision --autogenerate -m "initial"
-10. Write tests for ALL endpoints using pytest-asyncio
+10. Write tests for ALL endpoints using pytest-asyncio and @pytest.mark.asyncio
+11. tests/conftest.py MUST use localhost:5432 for PostgreSQL (CI requirement)
+12. Keep pytest-asyncio==0.24.0 — do NOT upgrade
+13. NEVER delete .github/workflows/ci.yml
 
 ## Step-by-Step Instructions
 1. Read /Users/YOURNAME/projects/dclaw-YOURAPP/PRODUCT-SPEC.md
@@ -253,28 +257,38 @@ Build the COMPLETE backend for this app. Read the PRODUCT-SPEC.md in the repo fo
 - In-memory MOCK_* dicts → use real repositories
 - Manual get_db() with __anext__() → use Depends(get_db)
 - Skipping alembic migrations → always generate one
+- Changing postgres port in tests → keep localhost:5432
 
 Report back with:
 - Did pytest pass? How many tests?
 - List of files you created
 ```
 
-**What to expect:** This agent will create files like `app/models/customer.py`, `app/repositories/customer_repo.py`, `app/api/v1/customers.py`, etc. It should take 10-20 minutes.
-
 ---
 
 ### Tab 2: Frontend Builder
 
 **What this agent builds:**
-- Web pages (Next.js pages)
-- Buttons, forms, tables, cards (React components)
-- API connection code (fetch calls to backend)
-- Styling (Tailwind CSS)
+1. **Pages** → What users see:
+   - `/` → Dashboard with charts and summary cards
+   - `/customers` → Table with search, filters, pagination
+   - `/customers/123` → Detail page for one customer
+   - `/customers/new` → Form to create a customer
+2. **Components** → Reusable UI pieces (buttons, cards, forms, tables)
+3. **API client** → Code that talks to the backend (`fetch('/api/v1/customers')`)
+4. **Styling** → Tailwind CSS classes for layout, colors, responsiveness
 
-**What this agent does NOT build:**
-- Database tables
-- API server logic
-- Docker configs
+**What you give it:**
+- The repo path
+- Your `PRODUCT-SPEC.md`
+- The backend API contract (from Tab 1's output)
+
+**What you get back:**
+- A working Next.js website
+- All screens connected to real backend data
+- `npm run build` passes
+
+**Branch:** `feat/frontend`
 
 **Copy-paste this prompt into Tab 2:**
 
@@ -289,33 +303,38 @@ Build the COMPLETE frontend for this app. Read the PRODUCT-SPEC.md in the repo f
 ## Stack Rules (NEVER violate these)
 1. Next.js 14 App Router
 2. Tailwind CSS for styling
-3. shadcn/ui components (install with: npx shadcn-ui@latest add button card input label badge select dialog table tabs)
+3. UI components from src/components/ui/ — these are pre-built and work. DO NOT install shadcn CLI or @base-ui/react.
 4. API calls MUST go through src/lib/api.ts
 5. NEVER hardcode "http://localhost:8000" — use process.env.NEXT_PUBLIC_API_URL
 6. NEVER use mock/in-memory data — call the real backend API
 7. npm run build MUST pass before you finish
 8. ALWAYS commit package-lock.json after npm install
+9. NEVER delete .github/workflows/ci.yml
+
+## Pre-Built Components Available
+- Button, Card, Input, Label, Badge, Select, Dialog, Table, Tabs, Avatar
+Import them like: import { Button } from "@/components/ui/button"
 
 ## Step-by-Step Instructions
 1. Read /Users/YOURNAME/projects/dclaw-YOURAPP/PRODUCT-SPEC.md
 2. Read the backend API routers to know the exact endpoints (check app/api/v1/)
-3. Install shadcn/ui components you need
-4. Update src/lib/api.ts with API functions for your endpoints
-5. Create pages in src/app/:
+3. Update src/lib/api.ts with API functions for your endpoints
+4. Create pages in src/app/:
    - / → Dashboard
    - /customers → List page (or whatever your entity is)
    - /customers/[id] → Detail page
    - /customers/new → Create form
    - Add more pages as needed
-6. Run npm run build
-7. Commit with: git add -A && git commit -m "feat: add frontend pages and components"
-8. Push: git push origin feat/frontend
+5. Run npm run build
+6. Commit with: git add -A && git commit -m "feat: add frontend pages and components"
+7. Push: git push origin feat/frontend
 
 ## Anti-Patterns to Avoid
 - Hardcoded localhost:PORT → use NEXT_PUBLIC_API_URL
 - Mock data → call real API
 - Forgetting package-lock.json → commit it
 - Breaking the build → npm run build must pass
+- Installing shadcn v4 → use pre-built components
 
 Report back with:
 - Did npm run build pass?
@@ -323,27 +342,28 @@ Report back with:
 - Any API endpoint mismatches you found
 ```
 
-**What to expect:** This agent will create files like `src/app/page.tsx` (dashboard), `src/app/customers/page.tsx`, `src/lib/api.ts`, etc. It should take 10-20 minutes.
-
-**Note:** The frontend agent needs to know the backend API contract. Either:
-- Wait for Tab 1 to finish, then paste the backend router files into Tab 2's prompt, OR
-- Include the API endpoints list in your PRODUCT-SPEC.md so both agents know them upfront
-
 ---
 
 ### Tab 3: DevOps Engineer
 
 **What this agent builds/fixes:**
-- Docker configuration
-- docker-compose.yml ports and healthchecks
-- Kubernetes Helm chart values
-- GitHub Actions CI workflow
-- Environment variable files
+1. **Backend Dockerfile** → Python container with correct port, non-root user, healthcheck
+2. **Frontend Dockerfile** → Node container with `ARG NEXT_PUBLIC_API_URL` (critical!)
+3. **docker-compose.yml** → Ties backend + frontend + database together with correct ports
+4. **Helm chart** → Kubernetes deployment configs
+5. **GitHub Actions** → CI that runs tests on every push
 
-**What this agent does NOT build:**
-- Database models
-- Web pages
-- Business logic
+**What you give it:**
+- The repo path
+- Your reserved backend/frontend ports
+- The anti-patterns list
+
+**What you get back:**
+- `docker-compose up -d` starts everything
+- All healthchecks pass
+- CI config is valid
+
+**Branch:** `feat/infra`
 
 **Copy-paste this prompt into Tab 3:**
 
@@ -364,6 +384,7 @@ Verify and fix all infrastructure configuration for this app.
 4. Frontend healthcheck: wget -q --spider http://localhost:PORT/
 5. docker-compose.yml ports must match the app's reserved ports
 6. Helm chart must reference the correct app name and image repos
+7. NEVER delete .github/workflows/ci.yml
 
 ## Step-by-Step Instructions
 1. Read /Users/YOURNAME/projects/dclaw-YOURAPP/PRODUCT-SPEC.md
@@ -384,26 +405,20 @@ Verify and fix all infrastructure configuration for this app.
    - App name is correct
    - Image repository names are correct
    - Ports are correct
-6. Verify .github/workflows/ci.yml:
-   - Runs backend tests
-   - Runs frontend build
-   - Uses correct ports and DB names
-7. Verify .env.example has correct defaults
-8. Run docker-compose config to validate
-9. Commit with: git add -A && git commit -m "chore: verify and fix infrastructure"
-10. Push: git push origin feat/infra
+6. Verify .github/workflows/ci.yml exists and is valid
+7. Update .env.example with app-specific defaults
+8. Commit all changes to branch feat/infra
 
 ## Anti-Patterns to Avoid
 - curl in python:*-slim healthchecks → use urllib.request
 - Missing ARG NEXT_PUBLIC_API_URL → add it before build
 - Wrong ports in docker-compose → match the reserved ports
+- Deleting CI workflow → keep it
 
 Report back with:
 - Did docker-compose config pass?
 - List of files you modified
 ```
-
-**What to expect:** This agent mostly verifies existing config and fixes small issues. It should take 5-10 minutes.
 
 ---
 
@@ -458,7 +473,7 @@ curl http://localhost:YOUR_BACKEND_PORT/health/
 # Should return: {"status":"ok"}
 
 # Check frontend
-curl http://localhost:YOUR_FRONTEND_PORT/
+curl http://localhost:YOUR_FRONTONT_PORT/
 # Should return HTML
 
 # Check all services are healthy
@@ -475,17 +490,59 @@ Go to `https://github.com/dclawstack/dclaw-YOURAPP/actions` and verify the CI tu
 
 ---
 
+## Lessons from Building 3 Apps
+
+We built `dclaw-crm`, `dclaw-finance`, and `dclaw-hr` using parallel agents. Here's what we learned:
+
+### Lesson 1: shadcn v4 Breaks Everything
+
+**What happened:** Agents installed `shadcn` npm package v4 and `@base-ui/react`. These are designed for Tailwind v4 and break Tailwind v3 builds with cryptic CSS errors.
+
+**Time wasted:** Each agent spent 20+ minutes retrying `npm install` and `npm run build` before timing out.
+
+**Fix:** The scaffold now includes pre-built UI components that work with Tailwind v3. Agents should use these directly instead of installing shadcn CLI.
+
+### Lesson 2: pytest-asyncio Version Hell
+
+**What happened:** `pytest-asyncio>=0.24.0` in requirements.txt installed version `1.3.0` which behaves differently from `0.24.x`. Session-scoped fixtures failed, repo tests couldn't find `db_session`.
+
+**Fix:** Pinned to `pytest-asyncio==0.24.0` in requirements.txt.
+
+### Lesson 3: Postgres Port Mismatch in CI
+
+**What happened:** Agents hardcoded non-standard postgres ports (5433, 5434, 5435) in `conftest.py`, but GitHub Actions service always maps to 5432.
+
+**Fix:** Enforced `localhost:5432` in conftest.py template.
+
+### Lesson 4: Agents Delete CI Workflows
+
+**What happened:** Two out of three agents deleted `.github/workflows/ci.yml` during their work.
+
+**Fix:** Added "DO NOT DELETE" rule to AGENTS.md.
+
+### Lesson 5: 30-Minute Timeout Is Tight
+
+**What happened:** All 3 agents timed out after 30 minutes because they spent too much time on the shadcn issue.
+
+**Recommendation:** Give agents smaller, focused tasks instead of "build everything":
+- Task 1: Models + schemas (10 min)
+- Task 2: Repositories + routers (10 min)
+- Task 3: Frontend pages (10 min)
+
+---
+
 ## Troubleshooting Common Errors
 
 | Error | What It Means | Fix |
 |-------|--------------|-----|
 | `npm ci` fails | Missing `package-lock.json` | Run `npm install` and commit the lockfile |
-| `next build` fails | TypeScript or import error | Check `src/lib/api.ts` for bad imports |
-| `pytest` fails | Backend test error | Check that `get_db` is overridden in `conftest.py` |
-| `docker-compose` port conflict | Another app using same port | Change port in `.env` or stop other apps |
-| `alembic` fails | Database not reachable | Start postgres container first |
-| Git push rejected | Remote has newer commits | Run `git pull --rebase origin main` then push |
-| `curl` not found in healthcheck | Wrong healthcheck command | Use `python urllib.request.urlopen()` |
+| `next build` fails | TypeScript or CSS error | Check `src/lib/api.ts` for bad imports; verify no `@base-ui/react` imports |
+| `pytest` fails | Backend test error | Check that `get_db` is overridden in `conftest.py`; verify port is 5432 |
+| `fixture 'db_session' not found` | Missing fixture in conftest.py | Add `db_session` fixture if repo tests need it |
+| Port conflict | Two apps use same port | Use port registry, never reuse |
+| Git push rejected | Remote has newer commits | Run `git pull --rebase` then push |
+| `curl not found` | Wrong healthcheck | Use `python urllib.request.urlopen()` |
+| `border-border` class error | shadcn v4 CSS in globals.css | Use the scaffold's globals.css template |
 
 ---
 
@@ -501,6 +558,7 @@ Go to `https://github.com/dclawstack/dclaw-YOURAPP/actions` and verify the CI tu
 - [ ] `AGENTS.md` and `PLAN-v1.2.md` are customized (no `{APP_NAME}` placeholders)
 - [ ] `package-lock.json` is committed
 - [ ] No in-memory `MOCK_*` dicts exist in the codebase
+- [ ] `.github/workflows/ci.yml` exists and was not deleted
 
 ---
 
