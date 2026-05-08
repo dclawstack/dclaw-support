@@ -23,7 +23,7 @@ class KnowledgeBaseArticle(Base):
     __tablename__ = "knowledge_base_articles"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True, init=False, default_factory=uuid.uuid4
+        primary_key=True, default_factory=uuid.uuid4
     )
     title: Mapped[str] = mapped_column(String(255), nullable=False)
     content: Mapped[str] = mapped_column(Text, nullable=False)
@@ -34,10 +34,9 @@ class KnowledgeBaseArticle(Base):
     )
     views: Mapped[int] = mapped_column(default=0)
     created_at: Mapped[datetime] = mapped_column(
-        default_factory=_utc_now, init=False
+        default_factory=_utc_now
     )
     updated_at: Mapped[datetime] = mapped_column(
         default_factory=_utc_now,
         onupdate=_utc_now,
-        init=False,
     )
