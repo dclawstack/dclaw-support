@@ -1,51 +1,48 @@
-# PRODUCT-SPEC: CRM
+# PRODUCT-SPEC: Support
 
 ## Overview
 
-**App Name:** CRM
-**Domain:** Customer Relationship Management
-**Target User:** Sales teams, account managers
+**App Name:** Support
+**Domain:** Ticketing, knowledge base, customer support
+**Target User:** Support agents, customers
 
 ## Core Entities
 
-### Customer
+### Ticket
 ```
-Customer
+Ticket
 ├── id: UUID (PK)
-├── name: str (required)
-├── email: str (unique, required)
-├── phone: str (optional)
-├── company: str (optional)
-├── status: enum ["lead", "active", "churned"] (default: "lead")
-├── notes: str (optional)
-├── created_at: datetime
-└── updated_at: datetime
-```
-
-### Deal
-```
-Deal
-├── id: UUID (PK)
-├── customer_id: UUID (FK → Customer, ondelete=CASCADE)
-├── title: str (required)
-├── value: float (required, default 0)
-├── stage: enum ["prospecting", "qualification", "proposal", "negotiation", "closed_won", "closed_lost"] (default: "prospecting")
-├── probability: int (0-100, default 0)
-├── expected_close_date: date (optional)
-├── created_at: datetime
-└── updated_at: datetime
-```
-
-### Activity
-```
-Activity
-├── id: UUID (PK)
-├── deal_id: UUID (FK → Deal, ondelete=CASCADE, optional)
-├── customer_id: UUID (FK → Customer, ondelete=CASCADE)
-├── activity_type: enum ["call", "email", "meeting", "note"] (required)
+├── subject: str (required)
 ├── description: str (required)
-├── scheduled_at: datetime (optional)
-├── completed: bool (default false)
+├── status: enum ["open", "in_progress", "waiting", "resolved", "closed"] (default: "open")
+├── priority: enum ["low", "medium", "high", "urgent"] (default: "medium")
+├── customer_email: str (required)
+├── customer_name: str (optional)
+├── assigned_to: str (optional)
+├── created_at: datetime
+└── updated_at: datetime
+```
+
+### Comment
+```
+Comment
+├── id: UUID (PK)
+├── ticket_id: UUID (FK → Ticket, ondelete=CASCADE)
+├── author: str (required)
+├── body: str (required)
+├── is_internal: bool (default false)
+├── created_at: datetime
+└── updated_at: datetime
+```
+
+### KnowledgeBaseArticle
+```
+KnowledgeBaseArticle
+├── id: UUID (PK)
+├── title: str (required)
+├── content: str (required)
+├── category: enum ["general", "billing", "technical", "account"] (required)
+├── views: int (default 0)
 ├── created_at: datetime
 └── updated_at: datetime
 ```
@@ -53,70 +50,52 @@ Activity
 ## User Stories / Screens
 
 ### Screen 1: Dashboard
-- Summary cards: total customers, open deals, total pipeline value, win rate
-- Recent activities feed
-- Deals by stage bar chart
-- Quick action buttons (add customer, add deal, log activity)
+- Summary cards: open tickets, resolved today, avg response time (mock), KB articles
+- Tickets by priority bar chart
+- Recent tickets list
 
-### Screen 2: Customers
-- Table view with pagination, search by name/email/company
-- Status filter (lead/active/churned)
-- Bulk delete
-- "Add Customer" modal/form
+### Screen 2: Tickets
+- Table view with pagination, search by subject/customer
+- Status and priority filters
+- "Create Ticket" form
 
-### Screen 3: Customer Detail
-- Customer info card with edit/delete
-- Related deals list
-- Related activities timeline
-- Add deal / add activity buttons
+### Screen 3: Ticket Detail
+- Ticket info with status/priority dropdowns, assignee input
+- Comment thread (public + internal)
+- "Add Comment" form
+- Resolve/Close buttons
 
-### Screen 4: Deals
-- Kanban board view by stage (prospecting → closed_won/lost)
-- Table view toggle
-- Search and filter by customer, stage, value
-- "Add Deal" form with customer dropdown
-
-### Screen 5: Deal Detail
-- Deal info with edit/delete
-- Probability slider
-- Related activities
-- Move stage buttons
-
-### Screen 6: Activities
-- Timeline view of all activities
-- Filter by type, customer, deal
-- Mark complete / incomplete
+### Screen 4: Knowledge Base
+- Article list with category filter, search
+- Article detail view
+- "Add Article" form
 
 ## AI Features
 
-- **Deal sentiment analysis:** Analyze customer emails/notes for positive/negative sentiment
-- **Next best action:** Recommend next activity based on deal stage and last contact
-- **Win probability prediction:** Use deal attributes to suggest probability score
+- **Auto-categorization:** Suggest category based on ticket subject (mock)
+- **Response draft:** Generate a suggested response based on ticket content (mock)
 
 ## API Endpoints (v1.0)
 
 ```
-GET    /api/v1/customers          → List customers
-POST   /api/v1/customers          → Create customer
-GET    /api/v1/customers/{id}     → Get customer
-PUT    /api/v1/customers/{id}     → Update customer
-DELETE /api/v1/customers/{id}     → Delete customer
-GET    /api/v1/deals              → List deals
-POST   /api/v1/deals              → Create deal
-GET    /api/v1/deals/{id}         → Get deal
-PUT    /api/v1/deals/{id}         → Update deal
-DELETE /api/v1/deals/{id}         → Delete deal
-GET    /api/v1/activities         → List activities
-POST   /api/v1/activities         → Create activity
-GET    /api/v1/activities/{id}    → Get activity
-PUT    /api/v1/activities/{id}    → Update activity
-DELETE /api/v1/activities/{id}    → Delete activity
+GET    /api/v1/tickets            → List tickets
+POST   /api/v1/tickets            → Create ticket
+GET    /api/v1/tickets/{id}       → Get ticket
+PUT    /api/v1/tickets/{id}       → Update ticket
+DELETE /api/v1/tickets/{id}       → Delete ticket
+GET    /api/v1/tickets/{id}/comments → List comments
+POST   /api/v1/tickets/{id}/comments → Add comment
+GET    /api/v1/articles           → List KB articles
+POST   /api/v1/articles           → Create article
+GET    /api/v1/articles/{id}      → Get article
+PUT    /api/v1/articles/{id}      → Update article
+DELETE /api/v1/articles/{id}      → Delete article
 GET    /api/v1/dashboard          → Dashboard stats
 ```
 
 ## Non-Functional Requirements
 
 - Backend tests: 70%+ coverage
-- Frontend: Responsive, Tailwind + shadcn/ui
+- Frontend: Responsive, Tailwind + pre-built UI components
 - Docker: All services start with `docker compose up -d`
 - No mock data — everything persisted to PostgreSQL
