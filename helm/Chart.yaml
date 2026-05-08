@@ -1,5 +1,5 @@
 apiVersion: v2
-name: dclaw-app
+name: dclaw-crm
 description: A Helm chart for DClaw vertical SaaS app
 type: application
 version: 1.0.0

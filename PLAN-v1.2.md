@@ -1,4 +1,4 @@
-# {APP_NAME} — v1.2 Feature Roadmap
+# CRM — v1.2 Feature Roadmap
 
 > **For coding agents:** Pick features from this list, implement them fully, and update this doc with a checkmark.
 > **Do NOT change the basic stack.** See `AGENTS.md` for architecture lock.

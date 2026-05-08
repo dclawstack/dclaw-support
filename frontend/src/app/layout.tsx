@@ -2,7 +2,7 @@ import type { Metadata } from "next";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: "DClaw App",
+  title: "DClaw CRM",
   description: "DClaw vertical SaaS application",
 };
 
