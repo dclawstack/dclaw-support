@@ -1,0 +1,3 @@
+from app.repositories.ticket_repo import TicketRepository
+from app.repositories.comment_repo import CommentRepository
+from app.repositories.kb_article_repo import KnowledgeBaseArticleRepository

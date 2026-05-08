@@ -23,6 +23,7 @@ wheels/
 venv/
 .env/
 .venv/
+.venv-linux/
 
 # IDEs
 .vscode/
@@ -40,5 +41,6 @@ venv/
 htmlcov/
 
 # Alembic
-alembic/versions/*.py
-!alembic/versions/.gitkeep
+# Keep migrations tracked
+# alembic/versions/*.py
+# !alembic/versions/.gitkeep
