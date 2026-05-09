@@ -32,7 +32,7 @@ class Ticket(Base):
     __tablename__ = "tickets"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True, default_factory=uuid.uuid4
+        primary_key=True, default=uuid.uuid4
     )
     subject: Mapped[str] = mapped_column(String(255), nullable=False)
     description: Mapped[str] = mapped_column(Text, nullable=False)
@@ -54,10 +54,10 @@ class Ticket(Base):
         String(255), nullable=True, default=None
     )
     created_at: Mapped[datetime] = mapped_column(
-        default_factory=_utc_now
+        default=_utc_now
     )
     updated_at: Mapped[datetime] = mapped_column(
-        default_factory=_utc_now,
+        default=_utc_now,
         onupdate=_utc_now,
     )
 

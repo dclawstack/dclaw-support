@@ -15,7 +15,7 @@ class Comment(Base):
     __tablename__ = "comments"
 
     id: Mapped[uuid.UUID] = mapped_column(
-        primary_key=True, default_factory=uuid.uuid4
+        primary_key=True, default=uuid.uuid4
     )
     ticket_id: Mapped[uuid.UUID] = mapped_column(
         ForeignKey("tickets.id", ondelete="CASCADE"),
@@ -25,7 +25,7 @@ class Comment(Base):
     body: Mapped[str] = mapped_column(Text, nullable=False)
     is_internal: Mapped[bool] = mapped_column(default=False)
     created_at: Mapped[datetime] = mapped_column(
-        default_factory=_utc_now
+        default=_utc_now
     )
 
     ticket: Mapped["Ticket"] = relationship(
